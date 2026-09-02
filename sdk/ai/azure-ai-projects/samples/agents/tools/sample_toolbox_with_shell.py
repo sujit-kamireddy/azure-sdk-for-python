@@ -10,13 +10,6 @@ DESCRIPTION:
     from a Prompt Agent using the synchronous AIProjectClient and the
     OpenAI-compatible client.
 
-    A `ShellToolboxTool` lets the agent run shell commands. Its `environment`
-    decides where those commands execute:
-      * `ToolboxShellContainerAutoEnvironment` - the service provisions a
-                container for you.
-      * `ToolboxShellContainerReferenceEnvironment` - reuse a container you
-        already created, by `container_id`.
-
     The agent reaches the toolbox through an `MCPTool` pointed at the toolbox's
     versioned `/mcp` URL, the same way any other toolbox tool is consumed.
 
@@ -28,7 +21,7 @@ USAGE:
 
     Before running the sample:
 
-    pip install "azure-ai-projects>=2.3.0" python-dotenv openai
+    pip install "azure-ai-projects>=2.6.0" python-dotenv openai
 
     Set these environment variables with your own values:
     1) FOUNDRY_PROJECT_ENDPOINT - The Azure AI Project endpoint, as found in the Overview
@@ -66,7 +59,7 @@ with (
     project_client.get_openai_client(agent_name=agent_name) as openai_client,
 ):
     try:
-        project_client.toolboxes.delete(TOOLBOX_NAME, headers={"Foundry-Features": "Toolboxes=V1Preview"})
+        project_client.toolboxes.delete(TOOLBOX_NAME)
         print(f"Deleted pre-existing toolbox `{TOOLBOX_NAME}`")
     except ResourceNotFoundError:
         pass
