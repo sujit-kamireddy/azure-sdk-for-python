@@ -1,5 +1,17 @@
 # Release History
 
+## 2.8.0 (Unreleased)
+
+### Features Added
+
+* Added private-preview Reinforcement Learning Environments (RLE) support through `AIProjectClient.rle` when constructed with `allow_preview=True`, including OpenEnv instance lifecycle management and environment management operations.
+
+### Sample updates
+
+* Added `sample_rle.py`, demonstrating a hosted RLE Wordle rollout.
+* Added `sample_rle_async.py`, demonstrating a hosted RLE Wordle rollout with an asynchronous client.
+* Added `sample_rle_environment_management.py`, demonstrating hosted RLE environment creation and pagination.
+
 ## 2.7.0 (2026-09-18)
 
 ### Features Added
