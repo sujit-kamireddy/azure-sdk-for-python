@@ -414,6 +414,7 @@ class TestSamples(AzureRecordedTestCase):
         [
             os.path.join("samples", "rle", "sample_rle.py"),
             os.path.join("samples", "rle", "sample_rle_environment_management.py"),
+            os.path.join("samples", "rle", "sample_rle_websocket.py"),
         ],
     )
     def test_rle_samples(self, sample_path: str) -> None:

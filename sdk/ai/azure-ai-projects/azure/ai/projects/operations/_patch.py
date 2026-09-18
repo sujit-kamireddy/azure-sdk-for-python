@@ -33,6 +33,7 @@ from ._patch_models import BetaModelsOperations
 from ._patch_rle import (
     OpenEnvClient,
     OpenEnvInstance,
+    OpenEnvWebSocket,
     RLEOperations,
     RLEQuotaExceededError,
     RLEInstanceAcquireTimeoutError,
@@ -254,6 +255,7 @@ __all__: List[str] = [
     "ServerEvent",
     "OpenEnvClient",
     "OpenEnvInstance",
+    "OpenEnvWebSocket",
     "RLEOperations",
     "RLEQuotaExceededError",
     "RLEInstanceAcquireTimeoutError",
