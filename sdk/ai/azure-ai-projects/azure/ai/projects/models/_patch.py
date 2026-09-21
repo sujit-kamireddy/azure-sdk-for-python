@@ -33,6 +33,13 @@ from ._patch_evaluation_typeddicts import (
     TracesPreviewEvalRunDataSource,
 )
 from ._models import CustomCredential as CustomCredentialGenerated
+from ._patch_rle_rollout import (
+    RLERolloutEpisode,
+    RLERolloutModelBinding,
+    RLERolloutRequest,
+    RLERolloutResult,
+    RLERolloutStep,
+)
 from ..models import (
     AgentInsightRunResult,
     AgentOptimizationJobResult,
@@ -751,6 +758,11 @@ __all__: List[str] = [
     "ModelSamplingConfigParam",
     "RedTeamEvalRunDataSource",
     "ResponseRetrievalItemGenerationParams",
+    "RLERolloutEpisode",
+    "RLERolloutModelBinding",
+    "RLERolloutRequest",
+    "RLERolloutResult",
+    "RLERolloutStep",
     "TargetCompletionEvalRunDataSource",
     "ToolDescriptionParam",
     "TracesPreviewEvalRunDataSource",

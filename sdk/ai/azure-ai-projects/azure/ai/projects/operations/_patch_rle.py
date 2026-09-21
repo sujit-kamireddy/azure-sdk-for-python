@@ -61,6 +61,8 @@ from ..models import (
     RLEInstance,
     RLEInstanceGroup,
     RLEInstanceStatus,
+    RLERolloutModelBinding,
+    RLERolloutResult,
     RLEnvironment,
     RLEnvironmentState,
     RLEnvironmentVersionBump,
@@ -68,6 +70,13 @@ from ..models import (
     RLEResetRequest,
     RLEStepRequest,
     RLEStepResult,
+)
+from ._patch_rle_rollout import (
+    EXECUTE_ROLLOUT_API_VERSION,
+    RLERolloutError,
+    build_rollout_body,
+    build_rollout_request,
+    deserialize_rollout_response,
 )
 from ._operations import (
     RLEnvironmentsOperations as _RLEnvironmentsOperationsGenerated,
@@ -1256,6 +1265,8 @@ class RLEOperations:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         config = args[1] if len(args) > 1 else kwargs.get("config")
         self._websocket_config = _websocket_config_from_client_config(config)
+        self._pipeline_client = args[0] if args else kwargs.get("client")
+        self._config = config
         self._environments = _RLEnvironmentsOperationsGenerated(*args, **kwargs)
         self._instance_groups = RLEInstanceGroupsOperations(*args, **kwargs)
         self._instances = RLEInstancesOperations(*args, **kwargs)
@@ -1528,6 +1539,94 @@ class RLEOperations:
             poll_interval_s=poll_interval_s,
         )
 
+    def _forwarded_token(self) -> str:
+        """Acquire the bearer RLE forwards to Capture Proxy, from this client's own credential."""
+        credential = getattr(self._config, "credential", None)
+        scopes = getattr(self._config, "credential_scopes", None)
+        if credential is None or not scopes:
+            raise RLEError(
+                "execute_rollout needs the client's credential to obtain the forwarded token "
+                "RLE presents to Loom, and this client was constructed without one."
+            )
+        return credential.get_token(*scopes).token
+
+    @distributed_trace
+    def execute_rollout(
+        self,
+        environment_name: str,
+        environment_version: str,
+        *,
+        task: Any,
+        model: RLERolloutModelBinding,
+        rollout_id: Optional[str] = None,
+        agent_input: Optional[Any] = None,
+        forwarded_token: Optional[str] = None,
+        **kwargs: Any,
+    ) -> RLERolloutResult:
+        """Run one complete rollout of a published environment version and return what it produced.
+
+        The service owns the episode. It leases a fresh sandbox, resets the environment on
+        ``task``, samples the model through Capture Proxy, applies each action, and repeats until
+        the environment terminates or the version's step budget is spent. There is no instance to
+        lease and no loop to drive: one call in, one finished trajectory out.
+
+        This is the difference from :meth:`get_openenv_client`, where the caller holds an instance
+        and does its own sampling between steps. Use that when the policy lives in your process;
+        use this when you want the service to run the episode against a named checkpoint.
+
+        The result carries both halves of a training example -- ``reward`` and, in
+        ``rollout``, the Capture Proxy graph whose sequences hold the ``input_ids``, ``loss_mask``
+        and ``logprobs`` of every turn sampled.
+
+        :param environment_name: Published environment name. Required.
+        :type environment_name: str
+        :param environment_version: Exact version to run. Required, and never resolved to
+         "latest": a rollout names the version that produced it so the trajectory stays
+         attributable.
+        :type environment_version: str
+        :keyword task: Opaque task record -- normally one dataset row -- forwarded unchanged to the
+         environment's reset. Required.
+        :paramtype task: any
+        :keyword model: Model and immutable Loom checkpoint this rollout samples from. Required.
+        :paramtype model: ~azure.ai.projects.models.RLERolloutModelBinding
+        :keyword rollout_id: Caller-supplied identifier, reserved within the project and returned
+         unchanged. A bare-hex UUID is generated when omitted.
+        :paramtype rollout_id: str or None
+        :keyword agent_input: Agent-visible input. Required by Harness targets and rejected by
+         Gym/OpenEnv, which takes ``task`` alone.
+        :paramtype agent_input: any or None
+        :keyword forwarded_token: Bearer token RLE forwards to Capture Proxy for Loom sampling.
+         Acquired from this client's credential when omitted, which is the common case.
+        :paramtype forwarded_token: str or None
+        :return: The completed rollout.
+        :rtype: ~azure.ai.projects.models.RLERolloutResult
+        :raises ~azure.ai.projects.operations.RLERolloutError: If the service refused the request
+         or could not complete the rollout.
+        """
+        if not environment_name:
+            raise ValueError("environment_name is required")
+        if not environment_version:
+            raise ValueError("environment_version is required")
+
+        body = build_rollout_body(
+            task=task, model=model, rollout_id=rollout_id, agent_input=agent_input
+        )
+        request = build_rollout_request(
+            environment_name=environment_name,
+            environment_version=environment_version,
+            body=body,
+            forwarded_token=forwarded_token or self._forwarded_token(),
+            api_version=kwargs.pop("api_version", EXECUTE_ROLLOUT_API_VERSION),
+        )
+        request.url = self._pipeline_client.format_url(  # type: ignore[union-attr]
+            request.url, endpoint=self._config.endpoint
+        )
+        response = self._pipeline_client._pipeline.run(  # pylint: disable=protected-access
+            request, stream=False, **kwargs
+        ).http_response
+        response.read()
+        return deserialize_rollout_response(response, body.rollout_id)
+
 
 __all__ = [
     "OpenEnvClient",
@@ -1535,6 +1634,7 @@ __all__ = [
     "RLEError",
     "RLEQuotaExceededError",
     "RLEInstanceAcquireTimeoutError",
+    "RLERolloutError",
     "OpenEnvInstance",
     "RLEOperations",
     "coerce_action",

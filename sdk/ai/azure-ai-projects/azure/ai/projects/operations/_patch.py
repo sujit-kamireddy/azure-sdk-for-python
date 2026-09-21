@@ -37,6 +37,7 @@ from ._patch_rle import (
     RLEOperations,
     RLEQuotaExceededError,
     RLEInstanceAcquireTimeoutError,
+    RLERolloutError,
 )
 from ._operations import (
     BetaEvaluationTaxonomiesOperations,
@@ -259,6 +260,7 @@ __all__: List[str] = [
     "RLEOperations",
     "RLEQuotaExceededError",
     "RLEInstanceAcquireTimeoutError",
+    "RLERolloutError",
     "TelemetryOperations",
 ]  # Add all objects you want publicly available to users at this package level
 
