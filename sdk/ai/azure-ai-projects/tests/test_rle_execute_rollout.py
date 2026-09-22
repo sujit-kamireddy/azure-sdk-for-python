@@ -86,7 +86,6 @@ def _client(endpoint: str) -> AIProjectClient:
     return AIProjectClient(
         endpoint=endpoint,
         credential=_FakeCredential(),
-        allow_preview=True,
     )
 
 

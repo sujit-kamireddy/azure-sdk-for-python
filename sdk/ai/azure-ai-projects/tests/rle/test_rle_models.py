@@ -243,40 +243,35 @@ def test_rle_symbols_exported_from_public_namespace():
     )
 
 
-def test_rle_requires_preview_opt_in():
+def test_rle_is_reachable_without_preview_opt_in():
+    """``rle`` is a first-class operation group, not a preview feature behind a flag.
+
+    Both spellings are asserted: a default client exposes it, and passing ``allow_preview``
+    for some other preview feature does not take it away again.
+    """
     from azure.ai.projects import AIProjectClient
     from azure.ai.projects.aio import AIProjectClient as AsyncAIProjectClient
 
     credential = _StaticTokenCredential()
-    with AIProjectClient(
-        endpoint="https://example.com/api/projects/test", credential=credential
-    ) as client:
-        assert not hasattr(client, "rle")
-    with AIProjectClient(
-        endpoint="https://example.com/api/projects/test",
-        credential=credential,
-        allow_preview=True,
-    ) as client:
-        assert isinstance(client.rle, RLEOperations)
-
-    async def run():
-        client = AsyncAIProjectClient(
-            endpoint="https://example.com/api/projects/test", credential=credential
-        )
-        try:
-            assert not hasattr(client, "rle")
-        finally:
-            await client.close()
-
-        client = AsyncAIProjectClient(
+    for extra in ({}, {"allow_preview": True}):
+        with AIProjectClient(
             endpoint="https://example.com/api/projects/test",
             credential=credential,
-            allow_preview=True,
-        )
-        try:
-            assert isinstance(client.rle, AsyncRLEOperations)
-        finally:
-            await client.close()
+            **extra,
+        ) as client:
+            assert isinstance(client.rle, RLEOperations)
+
+    async def run():
+        for extra in ({}, {"allow_preview": True}):
+            client = AsyncAIProjectClient(
+                endpoint="https://example.com/api/projects/test",
+                credential=credential,
+                **extra,
+            )
+            try:
+                assert isinstance(client.rle, AsyncRLEOperations)
+            finally:
+                await client.close()
 
     asyncio.run(run())
 
