@@ -49,12 +49,22 @@ from ...models import (
     RLEInstance,
     RLEInstanceGroup,
     RLEInstanceStatus,
+    RLERolloutPolicy,
+    RLESamplingOptions,
+    RLERolloutResult,
     RLEnvironment,
     RLEnvironmentState,
     RLEnvironmentVersionBump,
     RLEPaginationOrder,
     RLEStepRequest,
     RLEStepResult,
+)
+from ...operations._patch_rle_rollout import (
+    EXECUTE_ROLLOUT_API_VERSION,
+    RLERolloutError,
+    build_rollout_body,
+    build_rollout_request,
+    deserialize_rollout_response,
 )
 from ...operations._patch_rle import (
     _DEFAULT_INSTANCE_ACQUIRE_TIMEOUT_S,
@@ -1010,6 +1020,8 @@ class RLEOperations:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         config = args[1] if len(args) > 1 else kwargs.get("config")
         self._websocket_config = _websocket_config_from_client_config(config)
+        self._pipeline_client = args[0] if args else kwargs.get("client")
+        self._config = config
         self._environments = _RLEnvironmentsOperationsGenerated(*args, **kwargs)
         self._instance_groups = RLEInstanceGroupsOperations(*args, **kwargs)
         self._instances = RLEInstancesOperations(*args, **kwargs)
@@ -1285,6 +1297,105 @@ class RLEOperations:
             poll_interval_s=poll_interval_s,
         )
 
+    async def _forwarded_token(self) -> str:
+        """Acquire the bearer RLE forwards to Capture Proxy, from this client's own credential."""
+        credential = getattr(self._config, "credential", None)
+        scopes = getattr(self._config, "credential_scopes", None)
+        if credential is None or not scopes:
+            raise RLEError(
+                "execute_rollout needs the client's credential to obtain the forwarded token "
+                "RLE presents to Loom, and this client was constructed without one."
+            )
+        token = await credential.get_token(*scopes)
+        return token.token
+
+    @distributed_trace_async
+    async def execute_rollout(
+        self,
+        environment_name: str,
+        environment_version: str,
+        *,
+        task: Any,
+        policy: RLERolloutPolicy,
+        sampling: Optional[RLESamplingOptions] = None,
+        rollout_id: Optional[str] = None,
+        agent_input: Optional[Any] = None,
+        forwarded_token: Optional[str] = None,
+        **kwargs: Any,
+    ) -> RLERolloutResult:
+        """Run one complete rollout of a published environment version and return what it produced.
+
+        The service owns the episode. It leases a fresh sandbox, resets the environment on
+        ``task``, samples the model through Capture Proxy, applies each action, and repeats until
+        the environment terminates or the version's step budget is spent. There is no instance to
+        lease and no loop to drive: one call in, one finished trajectory out.
+
+        This is the difference from :meth:`get_openenv_client`, where the caller holds an instance
+        and does its own sampling between steps. Use that when the policy lives in your process;
+        use this when you want the service to run the episode against a named checkpoint.
+
+        The result carries both halves of a training example -- ``reward`` and, in
+        ``rollout``, the Capture Proxy graph whose sequences hold the ``input_ids``, ``loss_mask``
+        and ``logprobs`` of every turn sampled.
+
+        :param environment_name: Published environment name. Required.
+        :type environment_name: str
+        :param environment_version: Exact version to run. Required, and never resolved to
+         "latest": a rollout names the version that produced it so the trajectory stays
+         attributable.
+        :type environment_version: str
+        :keyword task: Opaque task record -- normally one dataset row -- forwarded unchanged to the
+         environment's reset. Required.
+        :paramtype task: any
+        :keyword policy: Where this rollout's weights come from, and which backend resolves them.
+         Required. :class:`~azure.ai.projects.models.RLELoomPolicy` is the only kind today.
+        :paramtype policy: ~azure.ai.projects.models.RLERolloutPolicy
+        :keyword sampling: How completions are sampled and rendered. Optional; the service picks a
+         compatible renderer when omitted.
+        :paramtype sampling: ~azure.ai.projects.models.RLESamplingOptions or None
+        :keyword rollout_id: Caller-supplied identifier, reserved within the project and returned
+         unchanged. A bare-hex UUID is generated when omitted.
+        :paramtype rollout_id: str or None
+        :keyword agent_input: Agent-visible input. Required by Harness targets and rejected by
+         Gym/OpenEnv, which takes ``task`` alone.
+        :paramtype agent_input: any or None
+        :keyword forwarded_token: Bearer token RLE forwards to Capture Proxy for Loom sampling.
+         Acquired from this client's credential when omitted, which is the common case.
+        :paramtype forwarded_token: str or None
+        :return: The completed rollout.
+        :rtype: ~azure.ai.projects.models.RLERolloutResult
+        :raises ~azure.ai.projects.operations.RLERolloutError: If the service refused the request
+         or could not complete the rollout.
+        """
+        if not environment_name:
+            raise ValueError("environment_name is required")
+        if not environment_version:
+            raise ValueError("environment_version is required")
+
+        body = build_rollout_body(
+            task=task,
+            policy=policy,
+            sampling=sampling,
+            rollout_id=rollout_id,
+            agent_input=agent_input,
+        )
+        request = build_rollout_request(
+            environment_name=environment_name,
+            environment_version=environment_version,
+            body=body,
+            forwarded_token=forwarded_token or await self._forwarded_token(),
+            api_version=kwargs.pop("api_version", EXECUTE_ROLLOUT_API_VERSION),
+        )
+        request.url = self._pipeline_client.format_url(  # type: ignore[union-attr]
+            request.url, endpoint=self._config.endpoint
+        )
+        pipeline_response = await self._pipeline_client._pipeline.run(  # pylint: disable=protected-access
+            request, stream=False, **kwargs
+        )
+        response = pipeline_response.http_response
+        await response.read()
+        return deserialize_rollout_response(response, body.rollout_id)
+
 
 __all__ = [
     "AsyncOpenEnvClient",
@@ -1293,6 +1404,7 @@ __all__ = [
     "RLEError",
     "RLEQuotaExceededError",
     "RLEInstanceAcquireTimeoutError",
+    "RLERolloutError",
     "RLEOperations",
     "coerce_action",
     "coerce_reset_body",
