@@ -21,7 +21,7 @@ from urllib.parse import quote
 from azure.core.exceptions import HttpResponseError
 from azure.core.rest import HttpRequest
 
-from ..models import RLERolloutModelBinding, RLERolloutRequest, RLERolloutResult
+from ..models import RLERolloutPolicy, RLERolloutRequest, RLERolloutResult, RLESamplingOptions
 
 # The Foundry data plane gates ``:executeRollout`` on this preview api-version. It is
 # deliberately not ``config.api_version`` (``v1``), which the instance-level RLE routes use:
@@ -120,7 +120,8 @@ def build_rollout_request(
 def build_rollout_body(
     *,
     task: Any,
-    model: RLERolloutModelBinding,
+    policy: RLERolloutPolicy,
+    sampling: Optional[RLESamplingOptions] = None,
     rollout_id: Optional[str] = None,
     agent_input: Optional[Any] = None,
 ) -> RLERolloutRequest:
@@ -132,8 +133,10 @@ def build_rollout_body(
 
     :keyword task: Opaque task record forwarded to the environment's reset.
     :paramtype task: any
-    :keyword model: Model and checkpoint binding.
-    :paramtype model: ~azure.ai.projects.models.RLERolloutModelBinding
+    :keyword policy: Where this rollout's weights come from.
+    :paramtype policy: ~azure.ai.projects.models.RLERolloutPolicy
+    :keyword sampling: How completions are sampled and rendered.
+    :paramtype sampling: ~azure.ai.projects.models.RLESamplingOptions or None
     :keyword rollout_id: Caller-supplied identifier. Generated when omitted.
     :paramtype rollout_id: str or None
     :keyword agent_input: Harness-only agent-visible input.
@@ -143,12 +146,13 @@ def build_rollout_body(
     """
     if task is None:
         raise ValueError("task is required: it is the record the environment resets on")
-    if model is None:
-        raise ValueError("model is required: a rollout must name the checkpoint it samples from")
+    if policy is None:
+        raise ValueError("policy is required: a rollout must name where its weights come from")
     return RLERolloutRequest(
         rollout_id=rollout_id or uuid.uuid4().hex,
         task=task,
-        model=model,
+        policy=policy,
+        sampling=sampling,
         agent_input=agent_input,
     )
 
