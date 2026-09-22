@@ -49,7 +49,8 @@ from ...models import (
     RLEInstance,
     RLEInstanceGroup,
     RLEInstanceStatus,
-    RLERolloutModelBinding,
+    RLERolloutPolicy,
+    RLESamplingOptions,
     RLERolloutResult,
     RLEnvironment,
     RLEnvironmentState,
@@ -1315,7 +1316,8 @@ class RLEOperations:
         environment_version: str,
         *,
         task: Any,
-        model: RLERolloutModelBinding,
+        policy: RLERolloutPolicy,
+        sampling: Optional[RLESamplingOptions] = None,
         rollout_id: Optional[str] = None,
         agent_input: Optional[Any] = None,
         forwarded_token: Optional[str] = None,
@@ -1345,8 +1347,12 @@ class RLEOperations:
         :keyword task: Opaque task record -- normally one dataset row -- forwarded unchanged to the
          environment's reset. Required.
         :paramtype task: any
-        :keyword model: Model and immutable Loom checkpoint this rollout samples from. Required.
-        :paramtype model: ~azure.ai.projects.models.RLERolloutModelBinding
+        :keyword policy: Where this rollout's weights come from, and which backend resolves them.
+         Required. :class:`~azure.ai.projects.models.RLELoomPolicy` is the only kind today.
+        :paramtype policy: ~azure.ai.projects.models.RLERolloutPolicy
+        :keyword sampling: How completions are sampled and rendered. Optional; the service picks a
+         compatible renderer when omitted.
+        :paramtype sampling: ~azure.ai.projects.models.RLESamplingOptions or None
         :keyword rollout_id: Caller-supplied identifier, reserved within the project and returned
          unchanged. A bare-hex UUID is generated when omitted.
         :paramtype rollout_id: str or None
@@ -1367,7 +1373,11 @@ class RLEOperations:
             raise ValueError("environment_version is required")
 
         body = build_rollout_body(
-            task=task, model=model, rollout_id=rollout_id, agent_input=agent_input
+            task=task,
+            policy=policy,
+            sampling=sampling,
+            rollout_id=rollout_id,
+            agent_input=agent_input,
         )
         request = build_rollout_request(
             environment_name=environment_name,

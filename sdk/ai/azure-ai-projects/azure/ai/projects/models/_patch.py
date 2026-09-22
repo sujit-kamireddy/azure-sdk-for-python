@@ -35,7 +35,9 @@ from ._patch_evaluation_typeddicts import (
 from ._models import CustomCredential as CustomCredentialGenerated
 from ._patch_rle_rollout import (
     RLERolloutEpisode,
-    RLERolloutModelBinding,
+    RLERolloutPolicy,
+    RLELoomPolicy,
+    RLESamplingOptions,
     RLERolloutRequest,
     RLERolloutResult,
     RLERolloutStep,
@@ -759,7 +761,9 @@ __all__: List[str] = [
     "RedTeamEvalRunDataSource",
     "ResponseRetrievalItemGenerationParams",
     "RLERolloutEpisode",
-    "RLERolloutModelBinding",
+    "RLERolloutPolicy",
+    "RLELoomPolicy",
+    "RLESamplingOptions",
     "RLERolloutRequest",
     "RLERolloutResult",
     "RLERolloutStep",

@@ -19,12 +19,14 @@ grader produced a verdict) and ``rollout``, the Capture Proxy graph, whose ``seq
 ``input_ids``/``loss_mask``/``logprobs`` of every model turn the episode sampled.
 """
 
-from typing import Any, List, Mapping, Optional, overload
+from typing import Any, List, Literal, Mapping, Optional, overload
 
-from .._utils.model_base import Model as _Model, rest_field
+from .._utils.model_base import Model as _Model, rest_discriminator, rest_field
 
 __all__ = [
-    "RLERolloutModelBinding",
+    "RLERolloutPolicy",
+    "RLELoomPolicy",
+    "RLESamplingOptions",
     "RLERolloutRequest",
     "RLERolloutResult",
     "RLERolloutEpisode",
@@ -34,43 +36,58 @@ __all__ = [
 _VISIBILITY = ["read", "create", "update", "delete", "query"]
 
 
-class RLERolloutModelBinding(_Model):
-    """The model a rollout samples from, bound to one immutable Loom checkpoint.
+class RLERolloutPolicy(_Model):
+    """Where a rollout's weights come from, discriminated by ``type``.
 
-    A rollout never samples from a deployment by name alone. ``loom_session_id`` and
-    ``checkpoint_id`` pin it to exact weights, which is what makes the returned trajectory
-    on-policy for that checkpoint and therefore trainable. The two are supplied together; the
-    service rejects one without the other.
+    A rollout has to say which backend resolves its weights before it can say anything about
+    them, because the fields that identify weights mean different things to different backends.
+    ``type`` is that statement; the concrete subclass carries whatever its backend requires.
+
+    :ivar type: Discriminator naming the backend. Required.
+    :vartype type: str
+    """
+
+    __mapping__: dict[str, _Model] = {}
+    type: str = rest_discriminator(name="type", visibility=_VISIBILITY)
+    """Discriminator naming the backend that resolves this policy's weights. Required."""
+
+
+class RLELoomPolicy(RLERolloutPolicy, discriminator="loom"):
+    """Weights held in a Loom training session, pinned to one immutable checkpoint.
+
+    A rollout never samples from a deployment by name alone. ``session_id`` and ``checkpoint_id``
+    pin it to exact weights, which is what makes the returned trajectory on-policy for that
+    checkpoint and therefore trainable. The two are supplied together; the service rejects one
+    without the other.
 
     ``project_endpoint`` is supplied per rollout rather than taken from the client, because one
     RLE deployment serves callers from many projects and the caller's token is presented against
     this endpoint.
 
+    :ivar type: Always ``"loom"``. Required.
+    :vartype type: str
     :ivar model_name: Training model to sample from. Required.
     :vartype model_name: str
     :ivar project_endpoint: Foundry project endpoint whose Loom sampler serves this rollout. Required.
     :vartype project_endpoint: str
-    :ivar loom_session_id: Loom training session identifier. Required, with ``checkpoint_id``.
-    :vartype loom_session_id: str
-    :ivar checkpoint_id: Immutable Loom checkpoint identifier. Required, with ``loom_session_id``.
+    :ivar session_id: Loom training session holding the weights. Required, with ``checkpoint_id``.
+    :vartype session_id: str
+    :ivar checkpoint_id: Immutable Loom checkpoint identifier. Required, with ``session_id``.
     :vartype checkpoint_id: str
-    :ivar renderer_name: Optional Capture Proxy renderer profile. The service picks a compatible
-     default when omitted.
-    :vartype renderer_name: str
     :ivar sequence_id: Optional Loom sequence identifier for this rollout.
     :vartype sequence_id: int
     """
 
+    type: Literal["loom"] = rest_discriminator(name="type", visibility=_VISIBILITY)  # type: ignore
+    """Always ``\"loom\"``. Required."""
     model_name: str = rest_field(visibility=_VISIBILITY)
     """Training model to sample from. Required."""
     project_endpoint: str = rest_field(visibility=_VISIBILITY)
     """Foundry project endpoint whose Loom sampler serves this rollout. Required."""
-    loom_session_id: str = rest_field(visibility=_VISIBILITY)
-    """Loom training session identifier. Required, with ``checkpoint_id``."""
+    session_id: str = rest_field(visibility=_VISIBILITY)
+    """Loom training session holding the weights. Required, with ``checkpoint_id``."""
     checkpoint_id: str = rest_field(visibility=_VISIBILITY)
-    """Immutable Loom checkpoint identifier. Required, with ``loom_session_id``."""
-    renderer_name: Optional[str] = rest_field(visibility=_VISIBILITY)
-    """Optional Capture Proxy renderer profile."""
+    """Immutable Loom checkpoint identifier. Required, with ``session_id``."""
     sequence_id: Optional[int] = rest_field(visibility=_VISIBILITY)
     """Optional Loom sequence identifier for this rollout."""
 
@@ -80,11 +97,39 @@ class RLERolloutModelBinding(_Model):
         *,
         model_name: str,
         project_endpoint: str,
-        loom_session_id: str,
+        session_id: str,
         checkpoint_id: str,
-        renderer_name: Optional[str] = None,
         sequence_id: Optional[int] = None,
     ) -> None: ...
+
+    @overload
+    def __init__(self, mapping: Mapping[str, Any]) -> None:
+        """
+        :param mapping: raw JSON to initialize the model.
+        :type mapping: Mapping[str, Any]
+        """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, type="loom", **kwargs)
+
+
+class RLESamplingOptions(_Model):
+    """How a rollout's completions are sampled and rendered.
+
+    Separate from :class:`RLERolloutPolicy` on purpose: a renderer describes how a completion is
+    turned into tokens, not where the weights came from, so it applies to every policy kind that
+    captures a trainable graph rather than being a property of one of them.
+
+    :ivar renderer_name: Optional Capture Proxy renderer profile. The service picks a compatible
+     default when omitted.
+    :vartype renderer_name: str
+    """
+
+    renderer_name: Optional[str] = rest_field(visibility=_VISIBILITY)
+    """Optional Capture Proxy renderer profile."""
+
+    @overload
+    def __init__(self, *, renderer_name: Optional[str] = None) -> None: ...
 
     @overload
     def __init__(self, mapping: Mapping[str, Any]) -> None:
@@ -109,8 +154,10 @@ class RLERolloutRequest(_Model):
     :vartype rollout_id: str
     :ivar task: Opaque task record passed verbatim to the environment's reset. Required.
     :vartype task: any
-    :ivar model: Model and checkpoint this rollout samples from. Required.
-    :vartype model: ~azure.ai.projects.models.RLERolloutModelBinding
+    :ivar policy: Where this rollout's weights come from. Required.
+    :vartype policy: ~azure.ai.projects.models.RLERolloutPolicy
+    :ivar sampling: How this rollout's completions are sampled and rendered. Optional.
+    :vartype sampling: ~azure.ai.projects.models.RLESamplingOptions
     :ivar agent_input: Agent-visible input, required by Harness targets and rejected by Gym/OpenEnv.
     :vartype agent_input: any
     """
@@ -119,8 +166,10 @@ class RLERolloutRequest(_Model):
     """Caller-generated identifier, returned unchanged. Required."""
     task: Any = rest_field(visibility=_VISIBILITY)
     """Opaque task record passed verbatim to the environment's reset. Required."""
-    model: RLERolloutModelBinding = rest_field(visibility=_VISIBILITY)
-    """Model and checkpoint this rollout samples from. Required."""
+    policy: RLERolloutPolicy = rest_field(visibility=_VISIBILITY)
+    """Where this rollout's weights come from. Required."""
+    sampling: Optional[RLESamplingOptions] = rest_field(visibility=_VISIBILITY)
+    """How this rollout's completions are sampled and rendered."""
     agent_input: Optional[Any] = rest_field(visibility=_VISIBILITY)
     """Agent-visible input. Harness targets only."""
 
@@ -130,7 +179,8 @@ class RLERolloutRequest(_Model):
         *,
         rollout_id: str,
         task: Any,
-        model: RLERolloutModelBinding,
+        policy: RLERolloutPolicy,
+        sampling: Optional[RLESamplingOptions] = None,
         agent_input: Optional[Any] = None,
     ) -> None: ...
 
