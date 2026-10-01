@@ -197,6 +197,67 @@ The table below lists the operation groups supported by the client library, with
 | Toolboxes | [Curate intent-based toolbox in Foundry](https://learn.microsoft.com/azure/foundry/agents/how-to/tools/toolbox?pivots=python) | `samples/hosted_agents/`, `samples/toolboxes/` |
 | Voice agents (preview) | | `samples/agents/voice/` |
 
+### Author a Foundry RLE environment
+
+Install the optional RLE environment-authoring dependencies:
+
+```bash
+pip install "azure-ai-projects[rle]"
+```
+
+Subclass `FoundryRLEEnvironment` and implement `reset()` and `grade()`. MCP tools
+are optional. Register them after `super().__init__()` with the inherited
+`tool()` decorator:
+
+```python
+from typing import Any
+
+from openenv.core.env_server import Observation, State, create_app
+
+from azure.ai.projects.rle.environments import FoundryRLEEnvironment, GradeAction
+
+
+class OrderEnvironment(FoundryRLEEnvironment):
+    def __init__(self) -> None:
+        super().__init__()
+
+        @self.tool()
+        def lookup_order(order_id: str) -> dict[str, str]:
+            return {"order_id": order_id, "status": "shipped"}
+
+    def reset(
+        self,
+        seed: int | None = None,
+        episode_id: str | None = None,
+        **kwargs: Any,
+    ) -> Observation:
+        self._set_state(State(episode_id=episode_id))
+        return Observation(metadata={"question": "What is the order status?"})
+
+    def grade(
+        self,
+        action: GradeAction,
+        timeout_s: float | None = None,
+        **kwargs: Any,
+    ) -> Observation:
+        is_correct = action.answer == "shipped"
+        return Observation(reward=float(is_correct), done=True)
+
+
+app = create_app(
+    OrderEnvironment,
+    GradeAction,
+    Observation,
+    state_cls=State,
+    env_name="order_environment",
+)
+```
+
+Pass `GradeAction` as the action class when creating the OpenEnv server so
+WebSocket step payloads are deserialized before `grade()` is called. If tools
+are already registered on a `FastMCP` server, pass it to
+`FoundryRLEEnvironment(mcp_server=server)` from the subclass constructor.
+
 
 ## Client-side tracing
 
