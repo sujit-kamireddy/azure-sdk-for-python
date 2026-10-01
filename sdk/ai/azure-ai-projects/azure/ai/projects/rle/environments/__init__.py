@@ -4,9 +4,9 @@
 # ------------------------------------
 """OpenEnv-compatible base classes for Foundry RLE environments."""
 
-from ._environment import FoundryRLEEnvironment, GradeAction
+from ._environment import GradeAction, RLEnvironment
 
 __all__ = [
-    "FoundryRLEEnvironment",
     "GradeAction",
+    "RLEnvironment",
 ]

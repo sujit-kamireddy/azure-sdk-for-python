@@ -19430,7 +19430,7 @@ namespace azure.ai.projects.operations
 
 namespace azure.ai.projects.rle.environments
 
-    class azure.ai.projects.rle.environments.FoundryRLEEnvironment(MCPEnvironment):
+    class azure.ai.projects.rle.environments.RLEnvironment(MCPEnvironment):
         property state: State    # Read-only
         property supports_code_mode: bool    # Read-only
         REQUIRES_SINGLE_THREAD_EXECUTOR = False

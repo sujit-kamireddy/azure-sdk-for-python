@@ -205,7 +205,7 @@ Install the optional RLE environment-authoring dependencies:
 pip install "azure-ai-projects[rle]"
 ```
 
-Subclass `FoundryRLEEnvironment` and implement `reset()` and `grade()`. MCP tools
+Subclass `RLEnvironment` and implement `reset()` and `grade()`. MCP tools
 are optional. Register them after `super().__init__()` with the inherited
 `tool()` decorator:
 
@@ -214,10 +214,10 @@ from typing import Any
 
 from openenv.core.env_server import Observation, State, create_app
 
-from azure.ai.projects.rle.environments import FoundryRLEEnvironment, GradeAction
+from azure.ai.projects.rle.environments import GradeAction, RLEnvironment
 
 
-class OrderEnvironment(FoundryRLEEnvironment):
+class OrderEnvironment(RLEnvironment):
     def __init__(self) -> None:
         super().__init__()
 
@@ -256,7 +256,7 @@ app = create_app(
 Pass `GradeAction` as the action class when creating the OpenEnv server so
 WebSocket step payloads are deserialized before `grade()` is called. If tools
 are already registered on a `FastMCP` server, pass it to
-`FoundryRLEEnvironment(mcp_server=server)` from the subclass constructor.
+`RLEnvironment(mcp_server=server)` from the subclass constructor.
 
 
 ## Client-side tracing

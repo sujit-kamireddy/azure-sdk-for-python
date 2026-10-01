@@ -18,10 +18,10 @@ from openenv.core.env_server.mcp_types import (  # type: ignore[import-untyped]
 )
 from openenv.core.env_server.types import Action, Observation, State  # type: ignore[import-untyped]
 
-from azure.ai.projects.rle.environments import FoundryRLEEnvironment, GradeAction
+from azure.ai.projects.rle.environments import GradeAction, RLEnvironment
 
 
-class _TestEnvironment(FoundryRLEEnvironment):
+class _TestEnvironment(RLEnvironment):
     def reset(
         self,
         seed: Optional[int] = None,
@@ -51,13 +51,13 @@ class _TestEnvironment(FoundryRLEEnvironment):
 
 
 def test_public_environment_inherits_openenv_mcp_environment() -> None:
-    assert issubclass(FoundryRLEEnvironment, MCPEnvironment)
+    assert issubclass(RLEnvironment, MCPEnvironment)
 
 
 def test_subclass_must_implement_reset_and_grade() -> None:
-    assert FoundryRLEEnvironment.__abstractmethods__ == frozenset({"grade", "reset"})
+    assert RLEnvironment.__abstractmethods__ == frozenset({"grade", "reset"})
 
-    class MissingImplementations(FoundryRLEEnvironment):
+    class MissingImplementations(RLEnvironment):
         pass
 
     with pytest.raises(TypeError, match="abstract"):

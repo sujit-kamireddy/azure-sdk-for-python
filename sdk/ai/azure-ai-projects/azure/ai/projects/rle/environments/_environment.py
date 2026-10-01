@@ -28,7 +28,7 @@ class GradeAction(Action):
     answer: str
 
 
-class FoundryRLEEnvironment(MCPEnvironment):
+class RLEnvironment(MCPEnvironment):
     """Base class for implementing a Foundry Reinforcement Learning Environment.
 
     Subclasses must implement :meth:`reset` to start an episode and :meth:`grade`
