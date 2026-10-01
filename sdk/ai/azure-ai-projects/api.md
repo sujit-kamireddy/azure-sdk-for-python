@@ -19428,6 +19428,42 @@ namespace azure.ai.projects.operations
             ) -> ToolboxObject: ...
 
 
+namespace azure.ai.projects.rle.environments
+
+    class azure.ai.projects.rle.environments.RLEnvironment(MCPEnvironment):
+        property state: State    # Read-only
+        property supports_code_mode: bool    # Read-only
+        REQUIRES_SINGLE_THREAD_EXECUTOR = False
+        SUPPORTS_CONCURRENT_SESSIONS = False
+
+        def __init__(self, mcp_server: Optional[FastMCP] = None) -> None: ...
+
+        @abstractmethod
+        def grade(
+                self,
+                action: GradeAction,
+                timeout_s: Optional[float] = None,
+                **kwargs: Any
+            ) -> Observation: ...
+
+        @abstractmethod
+        def reset(
+                self,
+                seed: Optional[int] = None,
+                episode_id: Optional[str] = None,
+                **kwargs: Any
+            ) -> Observation: ...
+
+
+    class azure.ai.projects.rle.environments.GradeAction(Action):
+        property model_extra: dict[str, Any] | None    # Read-only
+        property model_fields_set: set[str]    # Read-only
+        answer: str
+        model_computed_fields = {}
+        model_config = {'extra': 'forbid', 'validate_assignment': True, 'arbitrary_types_allowed': True}
+        model_fields = {'metadata': FieldInfo(annotation=Dict[str, Any], required=False, default_factory=dict, description='Additional metadata for the action'), 'answer': FieldInfo(annotation=str, required=True)}
+
+
 namespace azure.ai.projects.telemetry
 
     def azure.ai.projects.telemetry.trace_function(span_name: Optional[str] = None) -> Callable: ...
