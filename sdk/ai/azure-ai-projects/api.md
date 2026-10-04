@@ -19473,10 +19473,10 @@ namespace azure.ai.projects.rle.environments
     class azure.ai.projects.rle.environments.GradeAction(Action):
         property model_extra: dict[str, Any] | None    # Read-only
         property model_fields_set: set[str]    # Read-only
-        answer: str
+        response: str
         model_computed_fields = {}
         model_config = {'extra': 'forbid', 'validate_assignment': True, 'arbitrary_types_allowed': True}
-        model_fields = {'metadata': FieldInfo(annotation=Dict[str, Any], required=False, default_factory=dict, description='Additional metadata for the action'), 'answer': FieldInfo(annotation=str, required=True)}
+        model_fields = {'metadata': FieldInfo(annotation=Dict[str, Any], required=False, default_factory=dict, description='Additional metadata for the action'), 'response': FieldInfo(annotation=str, required=True)}
 
 
 namespace azure.ai.projects.telemetry
