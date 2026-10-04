@@ -5,7 +5,7 @@
 """OpenEnv-compatible base classes for Foundry RLE environments."""
 
 from abc import abstractmethod
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 try:
     from fastmcp import FastMCP
@@ -23,9 +23,14 @@ class GradeAction(Action):
 
     :param answer: The answer submitted by the agent.
     :type answer: str
+    :param rollout: The sanitized rollout graph RLE captured for this episode (turns, tool
+        calls, and any tool-call parse errors the model produced), when the rollout target
+        makes one available. ``None`` for targets or RLE versions that do not supply it.
+    :type rollout: dict or None
     """
 
     answer: str
+    rollout: Optional[Dict[str, Any]] = None
 
 
 class RLEnvironment(MCPEnvironment):

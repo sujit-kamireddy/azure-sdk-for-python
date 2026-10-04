@@ -72,6 +72,18 @@ def test_grade_action_requires_string_answer() -> None:
         GradeAction(answer=1)  # type: ignore[arg-type]
 
 
+def test_grade_action_rollout_defaults_to_none() -> None:
+    assert GradeAction(answer="correct").rollout is None
+
+
+def test_grade_action_accepts_rollout_graph() -> None:
+    rollout = {"turns": [{"tool_call_errors": [{"error_code": "invalid_json"}]}]}
+
+    action = GradeAction(answer="correct", rollout=rollout)
+
+    assert action.rollout == rollout
+
+
 def test_grade_action_dispatches_to_grade() -> None:
     environment = _TestEnvironment()
 
