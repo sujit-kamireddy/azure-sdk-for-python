@@ -158,8 +158,6 @@ class RLERolloutRequest(_Model):
     :vartype policy: ~azure.ai.projects.models.RLERolloutPolicy
     :ivar sampling: How this rollout's completions are sampled and rendered. Optional.
     :vartype sampling: ~azure.ai.projects.models.RLESamplingOptions
-    :ivar agent_input: Agent-visible input, required by Harness targets and rejected by Gym/OpenEnv.
-    :vartype agent_input: any
     """
 
     rollout_id: str = rest_field(visibility=_VISIBILITY)
@@ -170,8 +168,6 @@ class RLERolloutRequest(_Model):
     """Where this rollout's weights come from. Required."""
     sampling: Optional[RLESamplingOptions] = rest_field(visibility=_VISIBILITY)
     """How this rollout's completions are sampled and rendered."""
-    agent_input: Optional[Any] = rest_field(visibility=_VISIBILITY)
-    """Agent-visible input. Harness targets only."""
 
     @overload
     def __init__(
@@ -181,7 +177,6 @@ class RLERolloutRequest(_Model):
         task: Any,
         policy: RLERolloutPolicy,
         sampling: Optional[RLESamplingOptions] = None,
-        agent_input: Optional[Any] = None,
     ) -> None: ...
 
     @overload

@@ -171,34 +171,6 @@ def test_sends_task_policy_and_sampling_verbatim(rollout_server):
     assert body["sampling"] == {"renderer_name": "qwen3"}
 
 
-def test_omits_agent_input_when_unset(rollout_server):
-    """Gym/OpenEnv rejects ``agent_input`` outright, so an unset one must not be sent as null."""
-    recorder, endpoint = rollout_server
-    recorder.body = {"rollout_id": "r1"}
-
-    with _client(endpoint) as client:
-        _rollout(client, "math_rl", "1.0.6", task={"seed": 1}, policy=_policy())
-
-    assert "agent_input" not in recorder.requests[0]["body"]
-
-
-def test_sends_agent_input_for_harness_targets(rollout_server):
-    recorder, endpoint = rollout_server
-    recorder.body = {"rollout_id": "r1"}
-
-    with _client(endpoint) as client:
-        _rollout(
-            client,
-            "swe",
-            "2.0.0",
-            task={"row": 1},
-            agent_input={"prompt": "fix it"},
-            policy=_policy(),
-        )
-
-    assert recorder.requests[0]["body"]["agent_input"] == {"prompt": "fix it"}
-
-
 def test_escapes_environment_name_and_version(rollout_server):
     recorder, endpoint = rollout_server
     recorder.body = {"rollout_id": "r1"}

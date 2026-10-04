@@ -1319,7 +1319,6 @@ class RLEOperations:
         policy: RLERolloutPolicy,
         sampling: Optional[RLESamplingOptions] = None,
         rollout_id: Optional[str] = None,
-        agent_input: Optional[Any] = None,
         forwarded_token: Optional[str] = None,
         **kwargs: Any,
     ) -> RLERolloutResult:
@@ -1356,9 +1355,6 @@ class RLEOperations:
         :keyword rollout_id: Caller-supplied identifier, reserved within the project and returned
          unchanged. A bare-hex UUID is generated when omitted.
         :paramtype rollout_id: str or None
-        :keyword agent_input: Agent-visible input. Required by Harness targets and rejected by
-         Gym/OpenEnv, which takes ``task`` alone.
-        :paramtype agent_input: any or None
         :keyword forwarded_token: Bearer token RLE forwards to Capture Proxy for Loom sampling.
          Acquired from this client's credential when omitted, which is the common case.
         :paramtype forwarded_token: str or None
@@ -1377,7 +1373,6 @@ class RLEOperations:
             policy=policy,
             sampling=sampling,
             rollout_id=rollout_id,
-            agent_input=agent_input,
         )
         request = build_rollout_request(
             environment_name=environment_name,
