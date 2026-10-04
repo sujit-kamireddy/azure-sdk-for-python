@@ -123,7 +123,6 @@ def build_rollout_body(
     policy: RLERolloutPolicy,
     sampling: Optional[RLESamplingOptions] = None,
     rollout_id: Optional[str] = None,
-    agent_input: Optional[Any] = None,
 ) -> RLERolloutRequest:
     """Assemble a rollout request, generating an id when the caller did not supply one.
 
@@ -139,8 +138,6 @@ def build_rollout_body(
     :paramtype sampling: ~azure.ai.projects.models.RLESamplingOptions or None
     :keyword rollout_id: Caller-supplied identifier. Generated when omitted.
     :paramtype rollout_id: str or None
-    :keyword agent_input: Harness-only agent-visible input.
-    :paramtype agent_input: any or None
     :return: The assembled request.
     :rtype: ~azure.ai.projects.models.RLERolloutRequest
     """
@@ -153,7 +150,6 @@ def build_rollout_body(
         task=task,
         policy=policy,
         sampling=sampling,
-        agent_input=agent_input,
     )
 
 
