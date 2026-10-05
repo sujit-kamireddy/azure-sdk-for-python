@@ -212,9 +212,9 @@ are optional. Register them after `super().__init__()` with the inherited
 ```python
 from typing import Any
 
-from openenv.core.env_server import Observation, State, create_app
+from openenv.core.env_server import Observation, State
 
-from azure.ai.projects.rle.environments import GradeAction, RLEnvironment
+from azure.ai.projects.rle.environments import GradeAction, RLEnvironment, create_app
 
 
 class OrderEnvironment(RLEnvironment):
@@ -257,6 +257,26 @@ Pass `GradeAction` as the action class when creating the OpenEnv server so
 WebSocket step payloads are deserialized before `grade()` is called. If tools
 are already registered on a `FastMCP` server, pass it to
 `RLEnvironment(mcp_server=server)` from the subclass constructor.
+
+Use the SDK's `create_app` factory (same arguments and `FastAPI` return value
+as OpenEnv 0.6) to install request-scoped session routing automatically. Forward
+the supplied MCP endpoint, including its `rle_session_id` query parameter,
+unchanged and send ordinary `tools/list` and `tools/call` JSON-RPC requests.
+The query value is decoded once, consumed, and overwrites `params.session_id`;
+it is never added to tool arguments or schemas. Requests without the query keep
+OpenEnv's existing body-only routing. Other query parameters, lifecycle methods,
+non-MCP routes, WebSockets, and response streaming retain their behavior.
+
+Exactly one nonempty session query value is required when present. Invalid
+query values and request shapes return OpenEnv-style JSON-RPC errors.
+Query-adapted request bodies are bounded to 100 MiB (OpenEnv 0.6 has no HTTP
+body-size limit); oversized bodies return HTTP 413, and compressed bodies are
+rejected. OpenEnv's existing unsupported initialization, notifications, and batch
+behavior is unchanged.
+
+Treat session-bearing URLs as private runtime metadata: they can appear in
+agent-side access logs. Keep bearer tokens separate from the URL. Session
+selection is not authorization; the middleware does not verify session ownership.
 
 
 ## Client-side tracing

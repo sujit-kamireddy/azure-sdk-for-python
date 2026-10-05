@@ -1,0 +1,2 @@
+# The repository's env*/ rule must not hide the SDK environment-authoring package.
+!azure/ai/projects/rle/environments/

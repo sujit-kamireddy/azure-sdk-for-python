@@ -8,6 +8,7 @@
 * Added WebSocket interactions for leased OpenEnv instances through `OpenEnvInstance.open_websocket()` and its asynchronous equivalent, including text and binary messages, query parameters, subprotocol negotiation, and bounded retries for transient opening-handshake failures. Initial connections make at most three attempts, cap each attempt at 25 seconds and the overall connection at 90 seconds, and use full-jitter backoff.
 * Added environment-specific keyword fields to synchronous and asynchronous OpenEnv instance `reset()` operations.
 * Added `RLEnvironment` and `GradeAction` under `azure.ai.projects.rle.environments` for authoring OpenEnv-compatible Foundry RLE environments with optional MCP tools.
+* Added `azure.ai.projects.rle.environments.create_app`, an OpenEnv-compatible factory that installs request-scoped MCP session routing. The `rle_session_id` endpoint query value overrides body session routing for tool listing and calls without changing requests that omit it.
 
 ### Dependency update
 
