@@ -9,6 +9,7 @@
 * Added environment-specific keyword fields to synchronous and asynchronous OpenEnv instance `reset()` operations.
 * Added `RLEnvironment` and `GradeAction` under `azure.ai.projects.rle.environments` for authoring OpenEnv-compatible Foundry RLE environments with optional MCP tools.
 * Added `azure.ai.projects.rle.environments.create_app`, an OpenEnv-compatible factory that installs request-scoped MCP session routing. The `rle_session_id` endpoint query value overrides body session routing for tool listing and calls without changing requests that omit it.
+* Added an optional `rollout_graph` field to `GradeAction`, carrying the sanitized rollout graph (turns, tool calls, and tool-call parse errors) for rollout targets that supply one.
 
 ### Dependency update
 

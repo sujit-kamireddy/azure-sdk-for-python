@@ -240,7 +240,7 @@ class OrderEnvironment(RLEnvironment):
         timeout_s: float | None = None,
         **kwargs: Any,
     ) -> Observation:
-        is_correct = action.answer == "shipped"
+        is_correct = action.response == "shipped"
         return Observation(reward=float(is_correct), done=True)
 
 

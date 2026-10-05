@@ -5,7 +5,7 @@
 """OpenEnv-compatible base classes for Foundry RLE environments."""
 
 from abc import abstractmethod
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 try:
     from fastmcp import FastMCP
@@ -19,13 +19,19 @@ except ImportError as exc:  # pragma: no cover - dependency guard
 
 
 class GradeAction(Action):
-    """An action containing the answer to grade.
+    """An action containing the agent's response to grade.
 
-    :param answer: The answer submitted by the agent.
-    :type answer: str
+    :param response: The agent's response submitted for grading.
+    :type response: str
+    :param rollout_graph: The sanitized rollout graph RLE captured for this episode (turns,
+        tool calls, and any tool-call parse errors the model produced), when the rollout
+        target makes one available. ``None`` for targets or RLE versions that do not supply
+        it.
+    :type rollout_graph: dict or None
     """
 
-    answer: str
+    response: str
+    rollout_graph: Optional[Dict[str, Any]] = None
 
 
 class RLEnvironment(MCPEnvironment):
@@ -71,9 +77,9 @@ class RLEnvironment(MCPEnvironment):
         timeout_s: Optional[float] = None,
         **kwargs: Any,
     ) -> Observation:
-        """Grade an answer submitted by the agent.
+        """Grade a response submitted by the agent.
 
-        :param action: The answer to grade.
+        :param action: The response to grade.
         :type action: ~azure.ai.projects.rle.environments.GradeAction
         :param timeout_s: An optional grading timeout in seconds.
         :type timeout_s: float or None

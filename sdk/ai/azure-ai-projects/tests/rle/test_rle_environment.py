@@ -44,7 +44,7 @@ class _TestEnvironment(RLEnvironment):
             )
         )
         return Observation(
-            reward=1.0 if action.answer == "correct" else 0.0,
+            reward=1.0 if action.response == "correct" else 0.0,
             done=True,
             metadata={"timeout_s": timeout_s, **kwargs},
         )
@@ -64,19 +64,31 @@ def test_subclass_must_implement_reset_and_grade() -> None:
         MissingImplementations()
 
 
-def test_grade_action_requires_string_answer() -> None:
+def test_grade_action_requires_string_response() -> None:
     with pytest.raises(ValueError):
         GradeAction()  # type: ignore[call-arg]
 
     with pytest.raises(ValueError):
-        GradeAction(answer=1)  # type: ignore[arg-type]
+        GradeAction(response=1)  # type: ignore[arg-type]
+
+
+def test_grade_action_rollout_graph_defaults_to_none() -> None:
+    assert GradeAction(response="correct").rollout_graph is None
+
+
+def test_grade_action_accepts_rollout_graph() -> None:
+    rollout_graph = {"turns": [{"tool_call_errors": [{"error_code": "invalid_json"}]}]}
+
+    action = GradeAction(response="correct", rollout_graph=rollout_graph)
+
+    assert action.rollout_graph == rollout_graph
 
 
 def test_grade_action_dispatches_to_grade() -> None:
     environment = _TestEnvironment()
 
     observation = environment.step(
-        GradeAction(answer="correct"), timeout_s=5.0, attempt=1
+        GradeAction(response="correct"), timeout_s=5.0, attempt=1
     )
 
     assert observation.reward == 1.0
