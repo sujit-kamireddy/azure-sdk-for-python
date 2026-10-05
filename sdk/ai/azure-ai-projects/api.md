@@ -19430,6 +19430,21 @@ namespace azure.ai.projects.operations
 
 namespace azure.ai.projects.rle.environments
 
+    def azure.ai.projects.rle.environments.create_app(
+            env: Callable[[], Environment],
+            action_cls: Type[Action],
+            observation_cls: Type[Observation],
+            env_name: Optional[str] = None,
+            max_concurrent_envs: Optional[int] = None,
+            concurrency_config: Optional[ConcurrencyConfig] = None,
+            gradio_builder: Optional[Callable[..., Any]] = None,
+            custom_tab_name: str = "Custom",
+            custom_tab_primary: bool = False,
+            show_default_tab: bool = True,
+            title_override: Optional[str] = None,
+            state_cls: Type[State] = State
+        ) -> FastAPI: ...
+
     class azure.ai.projects.rle.environments.RLEnvironment(MCPEnvironment):
         property state: State    # Read-only
         property supports_code_mode: bool    # Read-only
