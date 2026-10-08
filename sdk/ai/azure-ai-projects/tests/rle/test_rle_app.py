@@ -122,8 +122,10 @@ def test_real_openenv_two_sessions_overwrite_and_repeated_calls(client):
     )
 
     with client.websocket_connect("/ws?" + urlencode({"session_id": first})) as socket:
-        socket.send_json({"type": "step", "data": {"answer": "answer"}})
-        graded = socket.receive_json()["data"]
+        socket.send_json({"type": "step", "data": {"response": "answer"}})
+        message = socket.receive_json()
+        assert message["type"] == "observation", message
+        graded = message["data"]
         assert graded["done"] is True
         assert graded["reward"] == 2.0
         assert graded["observation"]["metadata"]["episode"] == "first-episode"
